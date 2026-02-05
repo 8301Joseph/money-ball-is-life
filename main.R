@@ -9,8 +9,8 @@ library(knitr)
 # Read data ---------------------------------------------------------------
 
 submission <- read_csv("submission/tsa_pt_spread_moneyball_is_life_2026.csv")
-games <- read_csv("game_scores.csv")
-teams <- read_csv("2026_team_stats.csv")
+games <- read_csv("data/game_scores.csv")
+teams <- read_csv("data/2026_team_stats.csv")
 
 acc_teams <- c(
   "Duke","UNC","Virginia","Virginia Tech","NC State",
@@ -26,12 +26,31 @@ games <- games %>%
   rename(
     away_team = `Visitor/Neutral`,
     home_team = `Home/Neutral`,
-    away_pts = PTS,
-    home_pts = PTS.1
+    away_pts = PTS...3,
+    home_pts = PTS...5
   ) %>%
   mutate(
     spread = home_pts - away_pts
   )
+
+games <- games %>% #mismatched college team names
+  mutate(
+    home_team = case_when(
+      home_team == "Miami (FL)" ~ "Miami FL",
+      home_team == "NC State" ~ "N.C. State",
+      home_team == "Florida State" ~ "Florida St.",
+      home_team == "Southern Methodist" ~ "SMU",
+      TRUE ~ home_team
+    ),
+    away_team = case_when(
+      away_team == "Miami (FL)" ~ "Miami FL",
+      away_team == "NC State" ~ "N.C. State",
+      away_team == "Florida State" ~ "Florida St.",
+      away_team == "Southern Methodist" ~ "SMU",
+      TRUE ~ away_team
+    )
+  )
+
 
 
 # Join team stats ---------------------------------------------------------
@@ -63,7 +82,7 @@ games_model <- games_joined %>%
     barthag_diff = home_barthag - away_barthag,
     tempo_diff = home_adjt - away_adjt
   ) %>%
-  drop_na()
+  drop_na(spread, home_adjoe, away_adjoe)
 
 
 # Train/test split --------------------------------------------------------
@@ -78,11 +97,65 @@ test_data <- testing(split)
 
 # Fit model ---------------------------------------------------------------
 
-lm_model <- linear_reg() %>%
-  set_engine("lm") %>%
-  fit(spread ~ adjoe_diff + adjde_diff + barthag_diff + tempo_diff,
+lm_model <- lm(spread ~ adjoe_diff + adjde_diff + barthag_diff + tempo_diff,
       data = train_data)
 
 
 
+# Evaluate ----------------------------------------------------------------
 
+
+preds <- predict(lm_model, test_data)
+
+mae_vec(
+  truth = test_data$spread,
+  estimate = as.numeric(preds)
+)
+
+#aim for mae_vec ~10-12
+
+
+# Predict submission ------------------------------------------------------
+
+# Normalize submission team names to match teams_small$team
+submission <- submission %>%
+  mutate(
+    Home = case_when(
+      Home == "Miami (FL)" ~ "Miami FL",
+      Home == "NC State" ~ "N.C. State",
+      Home == "Florida State" ~ "Florida St.",
+      Home == "Southern Methodist" ~ "SMU",
+      TRUE ~ Home
+    ),
+    Away = case_when(
+      Away == "Miami (FL)" ~ "Miami FL",
+      Away == "NC State" ~ "N.C. State",
+      Away == "Florida State" ~ "Florida St.",
+      Away == "Southern Methodist" ~ "SMU",
+      TRUE ~ Away
+    )
+  )
+
+# Build the same features for submission games
+submission_games <- submission %>%
+  rename(away_team = Away, home_team = Home) %>%
+  left_join(teams_small, by = c("home_team" = "team")) %>%
+  rename_with(~paste0("home_", .), adjoe:adjt) %>%
+  left_join(teams_small, by = c("away_team" = "team")) %>%
+  rename_with(~paste0("away_", .), adjoe:adjt) %>%
+  mutate(
+    adjoe_diff = home_adjoe - away_adjoe,
+    adjde_diff = home_adjde - away_adjde,
+    barthag_diff = home_barthag - away_barthag,
+    tempo_diff = home_adjt - away_adjt
+  )
+
+# Predict and fill pt_spread
+submission$pt_spread <- as.numeric(predict(lm_model, submission_games))
+
+# Quick checks
+sum(is.na(submission$pt_spread))      # should be 0
+summary(submission$pt_spread)
+
+# Export
+write_csv(submission, "FINAL_SUBMISSION.csv")

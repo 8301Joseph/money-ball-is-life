@@ -36,6 +36,9 @@ games <- games %>%
 games <- games %>% #mismatched college team names
   mutate(
     home_team = case_when(
+      home_team == "Ohio State" ~ "Ohio St.",
+      home_team == "Pitt" ~ "Pittsburgh",
+      home_team == "Miami" ~ "Miami FL",
       home_team == "Miami (FL)" ~ "Miami FL",
       home_team == "NC State" ~ "N.C. State",
       home_team == "Florida State" ~ "Florida St.",
@@ -43,6 +46,9 @@ games <- games %>% #mismatched college team names
       TRUE ~ home_team
     ),
     away_team = case_when(
+      away_team == "Ohio State" ~ "Ohio St.",
+      away_team == "Pitt" ~ "Pittsburgh",
+      away_team == "Miami" ~ "Miami FL",
       away_team == "Miami (FL)" ~ "Miami FL",
       away_team == "NC State" ~ "N.C. State",
       away_team == "Florida State" ~ "Florida St.",
@@ -118,9 +124,17 @@ mae_vec(
 # Predict submission ------------------------------------------------------
 
 # Normalize submission team names to match teams_small$team
+# 1) Remove completely blank rows (these are creating NA teams)
+submission <- submission %>%
+  filter(!if_all(everything(), is.na))
+
+# 2) Normalize team names so they match teams_small$team
 submission <- submission %>%
   mutate(
     Home = case_when(
+      Home == "Ohio State" ~ "Ohio St.",
+      Home == "Pitt" ~ "Pittsburgh",
+      Home == "Miami" ~ "Miami FL",
       Home == "Miami (FL)" ~ "Miami FL",
       Home == "NC State" ~ "N.C. State",
       Home == "Florida State" ~ "Florida St.",
@@ -128,6 +142,9 @@ submission <- submission %>%
       TRUE ~ Home
     ),
     Away = case_when(
+      Away == "Ohio State" ~ "Ohio St.",
+      Away == "Pitt" ~ "Pittsburgh",
+      Away == "Miami" ~ "Miami FL",
       Away == "Miami (FL)" ~ "Miami FL",
       Away == "NC State" ~ "N.C. State",
       Away == "Florida State" ~ "Florida St.",

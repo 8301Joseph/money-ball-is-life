@@ -62,7 +62,7 @@ games <- games %>% #mismatched college team names
 # Join team stats ---------------------------------------------------------
 
 teams_small <- teams %>% #useful team stats
-  select(team, adjoe, adjde, barthag, adjt)
+  select(team, adjoe, adjde, adjt)
 
 # ADJOE — Adjusted Offensive Efficiency (Points scored per 100 possessions, 
 #                                       adjusted for opponent quality.)
@@ -85,7 +85,6 @@ games_model <- games_joined %>%
   mutate(
     adjoe_diff = home_adjoe - away_adjoe,
     adjde_diff = home_adjde - away_adjde,
-    barthag_diff = home_barthag - away_barthag,
     tempo_diff = home_adjt - away_adjt
   ) %>%
   drop_na(spread, home_adjoe, away_adjoe)
@@ -103,8 +102,7 @@ test_data <- testing(split)
 
 # Fit model ---------------------------------------------------------------
 
-lm_model <- lm(spread ~ adjoe_diff + adjde_diff #+ barthag_diff 
-               + tempo_diff,
+lm_model <- lm(spread ~ adjoe_diff + adjde_diff + tempo_diff,
       data = train_data)
 
 
@@ -164,7 +162,6 @@ submission_games <- submission %>%
   mutate(
     adjoe_diff = home_adjoe - away_adjoe,
     adjde_diff = home_adjde - away_adjde,
-    barthag_diff = home_barthag - away_barthag,
     tempo_diff = home_adjt - away_adjt
   )
 

@@ -8,7 +8,7 @@ library(knitr)
 
 # Read data ---------------------------------------------------------------
 
-submission <- read_csv("submission/tsa_pt_spread_moneyball_is_life_2026.csv")
+submission <- read_csv("submission/tsa_pt_spread.csv")
 games <- read_csv("data/game_scores.csv")
 teams <- read_csv("data/2026_team_stats.csv")
 
@@ -103,7 +103,8 @@ test_data <- testing(split)
 
 # Fit model ---------------------------------------------------------------
 
-lm_model <- lm(spread ~ adjoe_diff + adjde_diff + barthag_diff + tempo_diff,
+lm_model <- lm(spread ~ adjoe_diff + adjde_diff #+ barthag_diff 
+               + tempo_diff,
       data = train_data)
 
 
@@ -113,12 +114,12 @@ lm_model <- lm(spread ~ adjoe_diff + adjde_diff + barthag_diff + tempo_diff,
 
 preds <- predict(lm_model, test_data)
 
-mae_vec(
-  truth = test_data$spread,
-  estimate = as.numeric(preds)
-)
+#test different home court advantages
+mae_vec(test_data$spread, preds)          # baseline (~8)
+mae_vec(test_data$spread, preds-2) # accounting for systemic bias
+# MEAN_ERROR = −4.65
 
-#aim for mae_vec ~10-12
+#aim for mae_vec ~7-8
 
 
 # Predict submission ------------------------------------------------------
@@ -175,4 +176,4 @@ sum(is.na(submission$pt_spread))      # should be 0
 summary(submission$pt_spread)
 
 # Export
-write_csv(submission, "FINAL_SUBMISSION.csv")
+write_csv(submission, "tsa_pt_spread_moneyball_is_life_2026.csv")
